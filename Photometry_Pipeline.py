@@ -54,6 +54,11 @@ class Photometry_Pipeline:
             self._initialise_file_dictionary(Raw_Directory, 'Raw')
             self._initialise_filter_type_dictionary(Raw_Directory, 'Raw')
             
+            if self.Filter_Type == None:
+                self.Specified_Filter = False
+            else:
+                self.Specified_Filter = True
+            
             
             
         except Exception as e:
