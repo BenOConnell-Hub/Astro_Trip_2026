@@ -350,7 +350,7 @@ class Photometry_Pipeline:
                         print(f'No file for Dark for an exposure time of {exp_time} exists, creating file!')
                         self.Calculate_Dark_Master_Array()
             else:
-                self.ERR_STATEMENT += '\nThere is no dark available in this directory with an exposure time of {self.Exposure_Time}'
+                self.ERR_STATEMENT += f'\nThere is no dark available in this directory with an exposure time of {self.Exposure_Time}'
                 raise Exception
                 
         
