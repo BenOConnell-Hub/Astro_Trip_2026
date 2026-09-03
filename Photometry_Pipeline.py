@@ -174,29 +174,45 @@ class Photometry_Pipeline:
             start_time = time.time()
             source_dir = Path(self.Bias_Directory)
             files = source_dir.glob('*.fits')
+            files = list(files)
             big_array = []
             
+            no_of_files = len(files)
+            
+            counter = 0
+            bigger_array = []
             for file in files:
                 data = self.open_fits(file)
                 data = np.where(data>40000, np.nan, data)
                 big_array.append(data)
-                
-            big_array = np.array(big_array)
-            master_array = np.zeros_like(big_array[0])
-            np.nanmedian(big_array, axis = 0, out = master_array)
-            del(big_array)
+                if counter%25 == 0 or counter == (no_of_files-1):
+                    big_array = np.array(big_array)
+                    master_array = np.zeros_like(big_array[0])
+                    np.nanmedian(big_array, axis = 0, out = master_array)
+                    big_array = []
+                    bigger_array.append(master_array)
+                counter += 1
             
-            hdu = fits.PrimaryHDU(data = master_array)
+            del(big_array)
+            bigger_array = np.array(bigger_array)
+            if len(bigger_array) == 1:
+                finished_array = bigger_array[0]
+            
+            else:
+                finished_array = np.nanmedian(bigger_array, axis = 0)
+            
+            del(bigger_array)
+            hdu = fits.PrimaryHDU(data = finished_array)
             hdul = fits.HDUList([hdu])
             
             master_directory = Path(self.Bias_Directory + 'Master_Files/')
             
             if not master_directory.is_dir():
                 os.mkdir(self.Bias_Directory + 'Master_Files/')
-            
+            print('I got here')
             hdul.writeto(self.Bias_Directory + 'Master_Files/' + 'Master_Bias.fits')
             print(f'Bias Master Array Complete! Time taken: {time.time() - start_time:.3f}s')
-            return master_array
+            return finished_array
         
         except Exception as e:
             print(self.ERR_STATEMENT)
@@ -273,7 +289,7 @@ class Photometry_Pipeline:
                     if not master_directory.is_dir():
                         os.mkdir(self.Dark_Directory + 'Master_Files/')
                     
-                    hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.fits')
+                    hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
                     del(master_array)
                     print(f'Master Dark for {exp_time} array complete! Time taken: {time.time() - start_time:.3f}s')
                     
@@ -304,7 +320,7 @@ class Photometry_Pipeline:
                 if not master_directory.is_dir():
                     os.mkdir(self.Dark_Directory + 'Master_Files/')
                 
-                hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.fits')
+                hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
                 
                 print(f'Master Dark for {self.Exposure_Time} array complete! Time taken: {time.time() - start_time:.3f}s')
                 
@@ -326,11 +342,11 @@ class Photometry_Pipeline:
             if self.Exposure_Time in self.Exposure_Time_Dictionary['Dark']:
                 master_directory = Path(self.Dark_Directory + 'Master_Files/')
                 if master_directory.is_dir():
-                    master_array_file = Path(self.Dark_Directory + 'Master_Files' + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.txt')
+                    master_array_file = Path(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
                     #Check if it exists, if it does return it
                     if master_array_file.is_file():
                         print(f'A file for a Dark with an exposure time of {self.Exposure_Time} exists!')
-                        with fits.open(self.Dark_Directory + 'Master_Files/' + f'Master_Flat_{self.Filter_Type}.fits') as hdu:
+                        with fits.open(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(float(self.Exposure_Time)).replace(".","_")}.fits') as hdu:
                             data = hdu[0].data
                         return data
                     else:
@@ -364,8 +380,9 @@ class Photometry_Pipeline:
         
         try:
             start_time = time.time()
-            dark_data = np.loadtxt(self.Dark_Directory + 'Master_Dark_15_0.txt')
-            dark_data = dark_data/15
+            with fits.open("Data/2026_09_03/2026-09-03_OMICRON_F3p17_OPF_QHY600Ma_DARK/Master_Files/Master_Dark_60_0.fits") as hdu:
+                dark_data = hdu[0].data
+            dark_data = dark_data/60
             
             if hasattr(self, 'Bias_Master_Array') != True:
                 self.Bias_Master_Array = self.Bias_Combine()
@@ -567,7 +584,7 @@ class Photometry_Pipeline:
             if not processed_directory.is_dir():
                 os.mkdir(self.Raw_Directory + 'Processed_Files/')
             
-            hdul.writeto(self.Raw_Directory + 'Processed_Files/' + f'{Object}_{filt}_{self.Exposure_Time}.fits')
+            hdul.writeto(self.Raw_Directory + 'Processed_Files/' + f'{Object}_{filt}_{self.Exposure_Time}.fits', overwrite = True)
         
         except Exception as e:
             print(self.ERR_STATEMENT)
