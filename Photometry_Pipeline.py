@@ -161,6 +161,42 @@ class Photometry_Pipeline:
             print(self.ERR_STATEMENT)
             print(e)
     
+    def Calculate_Bias_Combine(self):
+        self.FUNC_NAME = '.Calculate_Bias_Combine()'
+        self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
+        
+        try:
+            start_time = time.time()
+            source_dir = Path(self.Bias_Directory)
+            files = source_dir.glob('*.fits')
+            big_array = []
+            
+            for file in files:
+                data = self.open_fits(file)
+                data = np.where(data>40000, np.nan, data)
+                big_array.append(data)
+                
+            big_array = np.array(big_array)
+            master_array = np.zeros_like(big_array[0])
+            np.nanmedian(big_array, axis = 0, out = master_array)
+            del(big_array)
+            
+            hdu = fits.PrimaryHDU(data = master_array)
+            hdul = fits.HDUList([hdu])
+            
+            master_directory = Path(self.Bias_Directory + 'Master_Files/')
+            
+            if not master_directory.is_dir():
+                os.mkdir(self.Bias_Directory + 'Master_Files/')
+            
+            hdul.writeto(self.Bias_Directory + 'Master_Files/' + 'Master_Bias.fits')
+            print(f'Bias Master Array Complete! Time taken: {time.time() - start_time:.3f}s')
+            return master_array
+        
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+    
     #Function to create a master median file
     def Bias_Combine(self):
         self.FUNC_NAME = '.Bias_Combine()'
@@ -168,32 +204,26 @@ class Photometry_Pipeline:
         
         try:
             start_time = time.time()
-            bias_file = Path(self.Bias_Directory + 'Master_Bias_File.txt')
-            #Check if it exists, if it does return it
-            if bias_file.is_file():
-                print('Existing bias file found, reusing file!')
-                print(f'Bias Master Array Complete! Time taken: {time.time() - start_time:.3f}s')
-                return np.loadtxt(self.Bias_Directory + 'Master_Bias_File.txt')
+            
+            master_directory = Path(self.Bias_Directory  + 'Master_Files/')
+            if master_directory.is_dir():
+                master_array_file = Path(self.Bias_Directory + 'Master_Files/' + 'Master_Bias.fits')
+                #Check if it exists, if it does return it
+                if master_array_file.is_file():
+                    print('A bias file already exists!')
+                    with fits.open(self.Bias_Directory + 'Master_Files/' + 'Master_Bias.fits') as hdu:
+                        data = hdu[0].data
+                    print(f'Bias Master Array Complete! Time taken: {time.time() - start_time:.3f}s')
+                    return data
+
+                else:
+                    print('No existing file found, creating Bias file')
+                    return self.Calculate_Bias_Combine()
+                
             #Otherwise make that file
             else:
                 print('No existing file found, creating Bias file')
-                source_dir = Path(self.Bias_Directory)
-                files = source_dir.iterdir()
-                big_array = []
-                
-                for file in files:
-                    data = self.open_fits(file)
-                    data = np.where(data>40000, np.nan, data)
-                    big_array.append(data)
-                    
-                big_array = np.array(big_array)
-                master_array = np.zeros_like(big_array[0])
-                np.nanmedian(big_array, axis = 0, out = master_array)
-                del(big_array)
-                
-                np.savetxt(self.Bias_Directory + 'Master_Bias_File.txt', master_array)
-                print(f'Bias Master Array Complete! Time taken: {time.time() - start_time:.3f}s')
-                return master_array
+                return self.Calculate_Bias_Combine()
             
         except Exception as e:
             print(self.ERR_STATEMENT)
@@ -230,7 +260,15 @@ class Photometry_Pipeline:
                     np.nanmedian(big_array, axis = 0, out = master_array)
                     del(big_array)
                     
-                    np.savetxt(self.Dark_Directory + f'Master_Dark_{str(exp_time).replace(".","_")}.txt', master_array)
+                    hdu = fits.PrimaryHDU(data = master_array)
+                    hdul = fits.HDUList([hdu])
+                    
+                    master_directory = Path(self.Dark_Directory + 'Master_Files/')
+                    
+                    if not master_directory.is_dir():
+                        os.mkdir(self.Dark_Directory + 'Master_Files/')
+                    
+                    hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.fits')
                     del(master_array)
                     print(f'Master Dark for {exp_time} array complete! Time taken: {time.time() - start_time:.3f}s')
                     
@@ -253,7 +291,16 @@ class Photometry_Pipeline:
                 np.nanmedian(big_array, axis = 0, out = master_array)
                 del(big_array)
                 
-                np.savetxt(self.Dark_Directory + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.txt', master_array)
+                hdu = fits.PrimaryHDU(data = master_array)
+                hdul = fits.HDUList([hdu])
+                
+                master_directory = Path(self.Dark_Directory + 'Master_Files/')
+                
+                if not master_directory.is_dir():
+                    os.mkdir(self.Dark_Directory + 'Master_Files/')
+                
+                hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.fits')
+                
                 print(f'Master Dark for {self.Exposure_Time} array complete! Time taken: {time.time() - start_time:.3f}s')
                 
                 return master_array
@@ -272,14 +319,21 @@ class Photometry_Pipeline:
             
             
             if self.Exposure_Time in self.Exposure_Time_Dictionary['Dark']:
-                master_array_file = Path(self.Dark_Directory + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.txt')
-                #Check if it exists, if it does return it
-                if master_array_file.is_file():
-                    print(f'A file for Dark for an exposure time of {self.Exposure_Time} exists!')
-                    return np.loadtxt(self.Dark_Directory + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.txt')
+                master_directory = Path(self.Dark_Directory + 'Master_Files/')
+                if master_directory.is_dir():
+                    master_array_file = Path(self.Dark_Directory + 'Master_Files' + f'Master_Dark_{str(self.Exposure_Time).replace(".","_")}.txt')
+                    #Check if it exists, if it does return it
+                    if master_array_file.is_file():
+                        print(f'A file for a Dark with an exposure time of {self.Exposure_Time} exists!')
+                        with fits.open(self.Dark_Directory + 'Master_Files/' + f'Master_Flat_{self.Filter_Type}.fits') as hdu:
+                            data = hdu[0].data
+                        return data
+                    else:
+                        print(f'No file for Dark with an exposure time of {self.Exposure_Time} exists, creating file!')
+                        return self.Dark_Calculate_Master_Array()
                 else:
-                    print(f'No file for Dark for an exposure time of {self.Exposure_Time} exists, creating file!')
-                    return self.Calculate_Dark_Master_Array()
+                    print(f'No file for Dark with an exposure time of {self.Exposure_Time} exists, creating file!')
+                    return self.Dark_Calculate_Master_Array()
             
             elif self.Exposure_Time == None:
                 for exp_time in self.Exposure_Time_Dictionary['Dark']:
@@ -311,9 +365,41 @@ class Photometry_Pipeline:
             if hasattr(self, 'Bias_Master_Array') != True:
                 self.Bias_Master_Array = self.Bias_Combine()
             
-            for filt in self.Filter_Type_Dictionary['Flat']:
+            if self.Filter_Type == None:
+                for filt in self.Filter_Type_Dictionary['Flat']:
+                    big_array = []
+                    for file in self.File_Dictionary['Flat'][filt]:
+                        with fits.open(file) as hdu:
+                            data = hdu[0].data
+                            exp_time = hdu[0].header['EXPTIME']
+                        
+                        data = np.where(data>40000, np.nan, data)
+                        data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
+                        big_array.append(data)
+                    
+                    big_array = np.array(big_array)
+                    master_array = np.zeros_like(big_array[0])
+                    np.nanmedian(big_array, axis = 0, out = master_array)
+                    del(big_array)
+                    
+                    master_array = master_array/np.nanmax(master_array)
+                    
+                    hdu = fits.PrimaryHDU(data = master_array)
+                    hdul = fits.HDUList([hdu])
+                    
+                    master_directory = Path(self.Flat_Directory + 'Master_Files/')
+                    
+                    if not master_directory.is_dir():
+                        os.mkdir(self.Flat_Directory + 'Master_Files/')
+                    
+                    hdul.writeto(self.Flat_Directory + 'Master_Files/' + f'Master_Flat_{filt}.fits')
+                    
+                    print(f'Master flat for filter {filt} array complete! Time taken: {time.time() - start_time:.3f}s')
+                    return None
+                
+            else:
                 big_array = []
-                for file in self.File_Dictionary['Flat'][filt]:
+                for file in self.File_Dictionary['Flat'][self.Filter_Type]:
                     with fits.open(file) as hdu:
                         data = hdu[0].data
                         exp_time = hdu[0].header['EXPTIME']
@@ -329,8 +415,17 @@ class Photometry_Pipeline:
                 
                 master_array = master_array/np.nanmax(master_array)
                 
-                np.savetxt(self.Flat_Directory + f'Master_Flat_{filt}.txt', master_array)
-                print(f'Master flat for filter {filt} array complete! Time taken: {time.time() - start_time:.3f}s')
+                hdu = fits.PrimaryHDU(data = master_array)
+                hdul = fits.HDUList([hdu])
+                
+                master_directory = Path(self.Flat_Directory + 'Master_Files/')
+                
+                if not master_directory.is_dir():
+                    os.mkdir(self.Flat_Directory + 'Master_Files/')
+                
+                hdul.writeto(self.Flat_Directory + 'Master_Files/' + f'Master_Flat_{self.Filter_Type}.fits')
+                
+                print(f'Master flat for filter {self.Filter_Type} array complete! Time taken: {time.time() - start_time:.3f}s')
                 return master_array
         
         except Exception as e:
@@ -344,11 +439,19 @@ class Photometry_Pipeline:
         try:
             #This is pure calculation to use reduction specify a time exposure
             if self.Filter_Type in self.Filter_Type_Dictionary['Flat']:
-                master_array_file = Path(self.Flat_Directory + f'Master_Flat_{self.Filter_Type}.txt')
-                #Check if it exists, if it does return it
-                if master_array_file.is_file():
-                    print(f'A file for a flat with a {self.Filter_Type} filter exists!')
-                    return np.loadtxt(self.Flat_Directory + f'Master_Flat_{self.Filter_Type}.txt')
+                master_directory = Path(self.Flat_Directory + 'Master_Files/')
+                if master_directory.is_dir():
+                    master_array_file = Path(self.Flat_Directory + 'Master_Files/' + f'Master_Flat_{self.Filter_Type}.fits')
+                    #Check if it exists, if it does return it
+                    if master_array_file.is_file():
+                        print(f'A file for a flat with a {self.Filter_Type} filter exists!')
+                        with fits.open(self.Flat_Directory + 'Master_Files/' + f'Master_Flat_{self.Filter_Type}.fits') as hdu:
+                            data = hdu[0].data
+                        return data
+                    
+                    else:
+                        print(f'No file for a flat with a {self.Filter_Type} filter exists, creating file!')
+                        return self.Calculate_Flat_Master_Array()
                 else:
                     print(f'No file for a flat with a {self.Filter_Type} filter exists, creating file!')
                     return self.Calculate_Flat_Master_Array()
@@ -365,7 +468,7 @@ class Photometry_Pipeline:
                         self.Calculate_Flat_Master_Array()
             
             else:
-                self.ERR_STATEMENT += '\nThere is no flat available in this directory with a filter of {self.Filter_Type}'
+                self.ERR_STATEMENT += f'\nThere is no flat available in this directory with a filter of {self.Filter_Type}'
                 raise Exception
         
         except Exception as e:
