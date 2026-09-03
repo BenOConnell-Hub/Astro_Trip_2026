@@ -535,6 +535,39 @@ class Photometry_Pipeline:
             print(self.ERR_STATEMENT)
             print(e)
     
+    def Calculate_Reduce_Images(self, Object, filt):
+        self.FUNC_NAME = '.Calculate_Reduce_Images()'
+        self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
+        try:
+            big_array = []
+            self.Filter_Type = filt
+            for file in self.File_Dictionary['Raw'][filt]:
+                Single_image = self.Calculate_Science_Array(file)
+                big_array.append(Single_image)
+            big_array = np.array(big_array)
+            master_array = np.zeros_like(big_array[0])
+            np.nanmedian(big_array, axis = 0, out = master_array)
+            del(big_array)
+            
+            norm = astropy.visualization.simple_norm(master_array, percent=90)
+            plt.imshow(master_array, cmap = 'Greys_r', norm = norm)
+            plt.title(f'Processed image of {Object} filter: {filt}')
+            plt.show()
+            
+            hdu = fits.PrimaryHDU(data = master_array)
+            hdul = fits.HDUList([hdu])
+            
+            processed_directory = Path(self.Raw_Directory + 'Processed_Files/')
+            
+            if not processed_directory.is_dir():
+                os.mkdir(self.Raw_Directory + 'Processed_Files/')
+            
+            hdul.writeto(self.Raw_Directory + 'Processed_Files/' + f'{Object}_{filt}_{self.Exposure_Time}.fits')
+        
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+    
     def Reduce_Images(self, Object):
         self.FUNC_NAME = '.Reduce_Images()'
         self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
@@ -542,32 +575,12 @@ class Photometry_Pipeline:
         try:
             if hasattr(self, 'Bias_Master_Array') != True:
                 self.Bias_Master_Array = self.Bias_Combine()
-            for filt in self.Filter_Type_Dictionary['Raw']:
-                big_array = []
-                self.Filter_Type = filt
-                for file in self.File_Dictionary['Raw'][filt]:
-                    Single_image = self.Calculate_Science_Array(file)
-                    big_array.append(Single_image)
-                big_array = np.array(big_array)
-                master_array = np.zeros_like(big_array[0])
-                np.nanmedian(big_array, axis = 0, out = master_array)
-                del(big_array)
-                
-                norm = astropy.visualization.simple_norm(master_array, percent=90)
-                plt.imshow(master_array, cmap = 'Greys_r', norm = norm)
-                plt.title(f'Processed image of {Object} filter: {filt}')
-                plt.show()
-                
-                hdu = fits.PrimaryHDU(data = master_array)
-                hdul = fits.HDUList([hdu])
-                
-                processed_directory = Path(self.Raw_Directory + 'Processed_Files/')
-                
-                if not processed_directory.is_dir():
-                    os.mkdir(self.Raw_Directory + 'Processed_Files/')
-                
-                hdul.writeto(self.Raw_Directory + 'Processed_Files/' + f'{Object}_{filt}_{self.Exposure_Time}.fits')
-        
+            if self.Specified_Filter == False:
+                for filt in self.Filter_Type_Dictionary['Raw']:
+                    self.Calculate_Reduce_Images(Object, filt)
+                    
+            else:
+                self.Calculate_Reduce_Images(Object, self.Filter_Type)
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
