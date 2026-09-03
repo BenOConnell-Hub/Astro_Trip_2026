@@ -12,24 +12,19 @@ import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
+import astropy
 
-PP = Photometry_Pipeline.Photometry_Pipeline(save_file=True, Exposure_Time=None)
+PP = Photometry_Pipeline.Photometry_Pipeline(Exposure_Time=5.0, Filter_Type= 'SDSSgp+')
 Dark_Directory = 'Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_DARK/'
 Bias_Directory = 'Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_BIAS/'
-data = PP.Science_Array('None', Dark_Directory, Bias_Directory, 'None')
-
+Flat_Directory = 'Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_FLAT/'
+Raw_File_Path = "Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_tres-2/tres-2_20260901T202356977_SC_SDSSgp+_0005s000_000000.fits"
+data = PP.Science_Array(Raw_File_Path, Dark_Directory, Bias_Directory, Flat_Directory)
+#PP.Calculate_Flat_Master_Array(Flat_Directory, Bias_Directory)
 
 '''
-new_data = np.loadtxt(Dark_Directory + 'Master_Dark_0_5.txt')
-print(np.max(new_data))
-plt.imshow(new_data, cmap='Wistia', vmin = np.min(new_data), vmax = np.max(new_data))
+new_data = np.loadtxt(Flat_Directory + 'Master_Flat_SDSSrp+.txt')
+plt.imshow(new_data, cmap='gray')
 plt.colorbar()
 plt.show()
 '''
-
-
-
-
-
-
-
