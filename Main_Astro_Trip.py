@@ -22,13 +22,17 @@ Bias_Directory = 'Data/2026_09_03/2026-09-03_OMICRON_F3p17_OPF_QHY600Ma_BIAS/'
 Flat_Directory = 'Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_FLAT/'
 #Raw_Directory = 'Data/2026_08_31/2026-08-31_OMICRON_F3p17_OPF_QHY600Ma_M31/' #2026-08-31
 Raw_Directory = 'Data/2026_09_02/2026-09-02_OMICRON_F3p17_OPF_QHY600Ma_M-16/'
+Highest_Exp_Dark = "Data/2026_09_03/2026-09-03_OMICRON_F3p17_OPF_QHY600Ma_DARK/Master_Files/Master_Dark_60_0.fits"
+Highest_Exp_Time = 60.0
 
 PP = Photometry_Pipeline.Photometry_Pipeline(Exposure_Time=60, 
-                                             Filter_Type=None,
+                                             Filter_Type='SDSSgp+',
                                              Raw_Directory = Raw_Directory,
                                              Flat_Directory = Flat_Directory,
                                              Bias_Directory = Bias_Directory,
-                                             Dark_Directory = Dark_Directory)
+                                             Dark_Directory = Dark_Directory,
+                                             File_Path_Highest_Exp_Dark = Highest_Exp_Dark,
+                                             Highest_Exp_Time = Highest_Exp_Time)
 '''
 Dark_Directory = 'Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_DARK/'
 Bias_Directory = 'Data/2026_09_01/2026-09-01_OMICRON_F3p17_OPF_QHY600Ma_BIAS/'
