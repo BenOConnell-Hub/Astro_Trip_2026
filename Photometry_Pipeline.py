@@ -11,9 +11,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import sys
 import numpy as np
-from datetime import datetime 
 import time
-from astropy.visualization import SimpleNorm
 import astropy
 import os
 
@@ -27,7 +25,9 @@ class Photometry_Pipeline:
                  Raw_Directory = None, 
                  Flat_Directory = None, 
                  Bias_Directory = None, 
-                 Dark_Directory = None):
+                 Dark_Directory = None,
+                 File_Path_Highest_Exp_Dark = None,
+                 Highest_Exp_Time = None):
         
         #Error Handling
         self.MOD_NAME = 'Photometry_Pipeline'
@@ -53,6 +53,9 @@ class Photometry_Pipeline:
             self._initialise_file_dictionary(Dark_Directory, 'Dark')
             self._initialise_file_dictionary(Raw_Directory, 'Raw')
             self._initialise_filter_type_dictionary(Raw_Directory, 'Raw')
+            
+            self.File_Path_Highest_Exp_Dark = File_Path_Highest_Exp_Dark
+            self.Highest_Exp_Time = Highest_Exp_Time
             
             if self.Filter_Type == None:
                 self.Specified_Filter = False
@@ -380,9 +383,9 @@ class Photometry_Pipeline:
         
         try:
             start_time = time.time()
-            with fits.open("Data/2026_09_03/2026-09-03_OMICRON_F3p17_OPF_QHY600Ma_DARK/Master_Files/Master_Dark_60_0.fits") as hdu:
+            with fits.open(self.File_Path_Highest_Exp_Dark) as hdu:
                 dark_data = hdu[0].data
-            dark_data = dark_data/60
+            dark_data = dark_data/self.Highest_Exp_Time
             
             if hasattr(self, 'Bias_Master_Array') != True:
                 self.Bias_Master_Array = self.Bias_Combine()
@@ -546,7 +549,7 @@ class Photometry_Pipeline:
                 
                 Science_Array = np.where(Science_Array>40000, np.nan, Science_Array)
                 Science_Array = np.divide(Science_Array,Master_Flat_Array)
-                #norm = astropy.visualization.simple_norm(Science_Array, percent = 90)
+                norm = astropy.visualization.simple_norm(Science_Array, percent = 90, )
                 #plt.imshow(Science_Array, cmap = 'Greys_r', norm = norm)
                 #plt.title('Science Array after Master Flat')
                 #plt.show()
