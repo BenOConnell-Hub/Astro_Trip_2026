@@ -205,6 +205,7 @@ class Photometry_Pipeline:
                 finished_array = np.nanmedian(bigger_array, axis = 0)
             
             del(bigger_array)
+            del(master_array)
             hdu = fits.PrimaryHDU(data = finished_array)
             hdul = fits.HDUList([hdu])
             
@@ -268,23 +269,39 @@ class Photometry_Pipeline:
                 #Loop over exposure times
                 for exp_time in self.Exposure_Time_Dictionary['Dark']:
                     big_array = []
+                    
+                    no_of_files = len(self.File_Dictionary['Dark'][exp_time])
+                    
+                    counter = 0
+                    bigger_array = []
                     #Loop over the files
                     for file in self.File_Dictionary['Dark'][exp_time]:
                         data = self.open_fits(file)
                         data = np.where(data>40000, np.nan, data)
                         big_array.append(data)
-                        
-                    big_array = np.array(big_array)
-                    master_array = np.zeros_like(big_array[0])
-                    
-                    for i in range(0,len(big_array)):
-                        big_array[i] = np.subtract(big_array[i], np.array(self.Bias_Master_Array))
-                        
-       
-                    np.nanmedian(big_array, axis = 0, out = master_array)
+                        if counter%25 == 0 or counter == (no_of_files-1):
+                            big_array = np.array(big_array)
+                            master_array = np.zeros_like(big_array[0])
+                            for i in range(0,len(big_array)):
+                                big_array[i] = np.subtract(big_array[i], np.array(self.Bias_Master_Array))
+                            
+                            np.nanmedian(big_array, axis = 0, out = master_array)
+                            big_array = []
+                            bigger_array.append(master_array)
+                        counter += 1
                     del(big_array)
+                    del(master_array)
                     
-                    hdu = fits.PrimaryHDU(data = master_array)
+                    bigger_array = np.array(bigger_array)
+                    if len(bigger_array) == 1:
+                        finished_array = bigger_array[0]
+                    
+                    else:
+                        finished_array = np.nanmedian(bigger_array, axis = 0)
+                    
+                    del(bigger_array)
+                            
+                    hdu = fits.PrimaryHDU(data = finished_array)
                     hdul = fits.HDUList([hdu])
                     
                     master_directory = Path(self.Dark_Directory + 'Master_Files/')
@@ -294,28 +311,45 @@ class Photometry_Pipeline:
                     
                     hdul.writeto(self.Dark_Directory + 'Master_Files/' + f'Master_Dark_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
                     del(master_array)
+                    print('IM BRICKED UP')
                     print(f'Master Dark for {exp_time} array complete! Time taken: {time.time() - start_time:.3f}s')
                     
                     return None
             else:
                 big_array = []
+                
+                no_of_files = len(self.File_Dictionary['Dark'][self.Exposure_Time])
+                
+                counter = 0
+                bigger_array = []
                 #Loop over the files
                 for file in self.File_Dictionary['Dark'][self.Exposure_Time]:
                     data = self.open_fits(file)
                     data = np.where(data>40000, np.nan, data)
                     big_array.append(data)
-                    
-                big_array = np.array(big_array)
-                master_array = np.zeros_like(big_array[0])
-                
-                for i in range(0,len(big_array)):
-                    big_array[i] = np.subtract(big_array[i], np.array(self.Bias_Master_Array))
-                    
-   
-                np.nanmedian(big_array, axis = 0, out = master_array)
+                    if counter%25 == 0 or counter == (no_of_files-1):
+                        big_array = np.array(big_array)
+                        master_array = np.zeros_like(big_array[0])
+                        for i in range(0,len(big_array)):
+                            big_array[i] = np.subtract(big_array[i], np.array(self.Bias_Master_Array))
+            
+                        np.nanmedian(big_array, axis = 0, out = master_array)
+                        big_array = []
+                        bigger_array.append(master_array)
+                    counter += 1
                 del(big_array)
+                del(master_array)
                 
-                hdu = fits.PrimaryHDU(data = master_array)
+                bigger_array = np.array(bigger_array)
+                if len(bigger_array) == 1:
+                    finished_array = bigger_array[0]
+                
+                else:
+                    finished_array = np.nanmedian(bigger_array, axis = 0)
+                
+                del(bigger_array)
+                        
+                hdu = fits.PrimaryHDU(data = finished_array)
                 hdul = fits.HDUList([hdu])
                 
                 master_directory = Path(self.Dark_Directory + 'Master_Files/')
@@ -327,7 +361,7 @@ class Photometry_Pipeline:
                 
                 print(f'Master Dark for {self.Exposure_Time} array complete! Time taken: {time.time() - start_time:.3f}s')
                 
-                return master_array
+                return finished_array
                 
             
         except Exception as e:
@@ -340,8 +374,6 @@ class Photometry_Pipeline:
         
         try: 
             #This is pure calculation to use reduction specify a time exposure
-            
-            
             if self.Exposure_Time in self.Exposure_Time_Dictionary['Dark']:
                 master_directory = Path(self.Dark_Directory + 'Master_Files/')
                 if master_directory.is_dir():
@@ -393,6 +425,10 @@ class Photometry_Pipeline:
             if self.Filter_Type == None:
                 for filt in self.Filter_Type_Dictionary['Flat']:
                     big_array = []
+                    no_of_files = len(self.File_Dictionary['Flat'][filt])
+                    
+                    counter = 0
+                    bigger_array = []
                     for file in self.File_Dictionary['Flat'][filt]:
                         with fits.open(file) as hdu:
                             data = hdu[0].data
@@ -401,15 +437,27 @@ class Photometry_Pipeline:
                         data = np.where(data>40000, np.nan, data)
                         data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
                         big_array.append(data)
-                    
-                    big_array = np.array(big_array)
-                    master_array = np.zeros_like(big_array[0])
-                    np.nanmedian(big_array, axis = 0, out = master_array)
+                        if counter%25 == 0 or counter == (no_of_files - 1):
+                            big_array = np.array(big_array)
+                            master_array = np.zeros_like(big_array[0])
+                            np.nanmedian(big_array, axis = 0, out = master_array)
+                            big_array = []
+                            bigger_array.append(master_array)
+                        counter += 1
                     del(big_array)
+                    del(master_array)
                     
-                    master_array = master_array/np.nanmax(master_array)
+                    bigger_array = np.array(bigger_array)
+                    if len(bigger_array) == 1:
+                        finished_array = bigger_array[0]
                     
-                    hdu = fits.PrimaryHDU(data = master_array)
+                    else:
+                        finished_array = np.nanmedian(bigger_array, axis = 0)
+                    
+                    del(bigger_array)
+                    finished_array = finished_array/np.nanmax(finished_array)
+                    
+                    hdu = fits.PrimaryHDU(data = finished_array)
                     hdul = fits.HDUList([hdu])
                     
                     master_directory = Path(self.Flat_Directory + 'Master_Files/')
@@ -424,6 +472,10 @@ class Photometry_Pipeline:
                 
             else:
                 big_array = []
+                no_of_files = len(self.File_Dictionary['Flat'][self.Filter_Type])
+                
+                counter = 0
+                bigger_array = []
                 for file in self.File_Dictionary['Flat'][self.Filter_Type]:
                     with fits.open(file) as hdu:
                         data = hdu[0].data
@@ -432,15 +484,28 @@ class Photometry_Pipeline:
                     data = np.where(data>40000, np.nan, data)
                     data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
                     big_array.append(data)
-                
-                big_array = np.array(big_array)
-                master_array = np.zeros_like(big_array[0])
-                np.nanmedian(big_array, axis = 0, out = master_array)
+                    if counter%25 == 0 or counter == (no_of_files - 1):
+                        big_array = np.array(big_array)
+                        master_array = np.zeros_like(big_array[0])
+                        np.nanmedian(big_array, axis = 0, out = master_array)
+                        big_array = []
+                        bigger_array.append(master_array)
+                    counter += 1
                 del(big_array)
+                del(master_array)
                 
-                master_array = master_array/np.nanmax(master_array)
+                bigger_array = np.array(bigger_array)
+                if len(bigger_array) == 1:
+                    finished_array = bigger_array[0]
                 
-                hdu = fits.PrimaryHDU(data = master_array)
+                else:
+                    finished_array = np.nanmedian(bigger_array, axis = 0)
+                
+                del(bigger_array)
+                
+                finished_array = finished_array/np.nanmax(finished_array)
+                
+                hdu = fits.PrimaryHDU(data = finished_array)
                 hdul = fits.HDUList([hdu])
                 
                 master_directory = Path(self.Flat_Directory + 'Master_Files/')
@@ -451,7 +516,7 @@ class Photometry_Pipeline:
                 hdul.writeto(self.Flat_Directory + 'Master_Files/' + f'Master_Flat_{self.Filter_Type}.fits')
                 
                 print(f'Master flat for filter {self.Filter_Type} array complete! Time taken: {time.time() - start_time:.3f}s')
-                return master_array
+                return finished_array
         
         except Exception as e:
             print(self.ERR_STATEMENT)
