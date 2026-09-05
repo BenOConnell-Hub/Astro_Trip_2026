@@ -11,20 +11,15 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import sys
 import numpy as np
-<<<<<<< HEAD
 from datetime import datetime 
-=======
 import time
 import astropy
 import os
->>>>>>> master
-
+from astropy.visualization import make_rgb, PercentileInterval, SqrtStretch, ManualInterval
 
 class Photometry_Pipeline:
     
-<<<<<<< HEAD
-    def __init__(self, save_file):
-=======
+
     #Initilisation Function
     def __init__(self, 
                  Exposure_Time = None, 
@@ -37,16 +32,12 @@ class Photometry_Pipeline:
                  Highest_Exp_Time = None):
         
         #Error Handling
->>>>>>> master
         self.MOD_NAME = 'Photometry_Pipeline'
         self.ERR_BASE = 'ERROR: ' + self.MOD_NAME
         self.FUNC_NAME = '.__init__()'
         self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
         
         try:
-<<<<<<< HEAD
-            self.save_file = save_file
-=======
             self.Exposure_Time = Exposure_Time
             self.Filter_Type = Filter_Type
             self.File_Dictionary = {}
@@ -72,16 +63,12 @@ class Photometry_Pipeline:
                 self.Specified_Filter = False
             else:
                 self.Specified_Filter = True
-            
-            
->>>>>>> master
-            
+ 
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
     
-<<<<<<< HEAD
-=======
+
     #Initilise Filter Times for Flats
     def _initialise_filter_type_dictionary(self, Directory, acquisition_type):
         self.FUNC_NAME = '._initiliase_filter_time_dictionary()'
@@ -168,7 +155,6 @@ class Photometry_Pipeline:
             print(e)
         
     
->>>>>>> master
     #Test opening a fits file
     def open_fits(self, file_path):
         self.FUNC_NAME = '.open_fits()'
@@ -179,9 +165,7 @@ class Photometry_Pipeline:
             with fits.open(file_path) as hdu:
                 data = hdu[0].data
             return data
-<<<<<<< HEAD
-=======
-            
+   
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
@@ -234,32 +218,12 @@ class Photometry_Pipeline:
             hdul.writeto(self.Bias_Directory + 'Master_Files/' + 'Master_Bias.fits')
             print(f'Bias Master Array Complete! Time taken: {time.time() - start_time:.3f}s')
             return finished_array
->>>>>>> master
         
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
     
-    #Function to create a master median file
-<<<<<<< HEAD
-    def Median_Combine(self, file_directory):
-        self.FUNC_NAME = '.Median_Combine()'
-        self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
-        
-        try:
-            source_dir = Path(file_directory)
-            files = source_dir.iterdir()
-            big_array = []
-            for file in files:
-                big_array.append(self.open_fits(file))
-            big_array = np.array(big_array)
-            master_array = np.zeros_like(big_array[0])
-            np.median(big_array, axis = 0, out = master_array)
-            
-            if self.save_file == True:
-                np.savetxt(f'Median_Combine_Output_{datetime.today().isoformat().replace(":","")}.txt', master_array)
-            return master_array
-=======
+
     def Bias_Combine(self):
         self.FUNC_NAME = '.Bias_Combine()'
         self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
@@ -286,39 +250,11 @@ class Photometry_Pipeline:
             else:
                 print('No existing file found, creating Bias file')
                 return self.Calculate_Bias_Combine()
->>>>>>> master
-            
+   
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
-      
-<<<<<<< HEAD
-    #Function to create the Master_Dark file
-    def Master_Dark(self, Dark_Directory, Bias_Directory):
-        self.FUNC_NAME = '.Master_Dark()'
-        self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
-        
-        try:
-            
-            source_dir = Path(Dark_Directory)
-            files = source_dir.iterdir()
-            big_array = []
-            for file in files:
-                big_array.append(self.open_fits(file))
-            big_array = np.array(big_array)
-            master_array = np.zeros_like(big_array[0])
 
-            if hasattr(self, 'Bias_Master_Array') != True:
-                self.Bias_Master_Array = self.Median_Combine(Bias_Directory)
-            
-            for i in range(0, len(big_array)):
-                big_array[i] = big_array[i] - self.Bias_Master_Array
-            np.median(big_array, axis = 0, out = master_array)
-            if self.save_file == True:
-                np.savetxt(f'Master_Dark_Output_{datetime.today().isoformat().replace(":","")}.txt', master_array)
-            return master_array
-            
-=======
     #Function to create the Master Array file
     def Dark_Calculate_Master_Array(self):
         self.FUNC_NAME = '.Dark_Calculate_Master_Array()'
@@ -458,7 +394,7 @@ class Photometry_Pipeline:
             
             elif self.Exposure_Time == None:
                 for exp_time in self.Exposure_Time_Dictionary['Dark']:
-                    master_array_file = Path(self.Dark_Directory + f'Master_Dark_{str(exp_time).replace(".","_")}.txt')
+                    master_array_file = Path(self.Dark_Directory + f'Master_Dark_{str(float(exp_time)).replace(".","_")}.txt')
                     #Check if it exists, if it does return it
                     if master_array_file.is_file():
                         print(f'A file for Dark for an exposure time of {exp_time} exists!')
@@ -479,6 +415,8 @@ class Photometry_Pipeline:
         self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
         
         try:
+            max_median = 40000
+            min_median = 20000
             start_time = time.time()
             with fits.open(self.File_Path_Highest_Exp_Dark) as hdu:
                 dark_data = hdu[0].data
@@ -498,10 +436,13 @@ class Photometry_Pipeline:
                         with fits.open(file) as hdu:
                             data = hdu[0].data
                             exp_time = hdu[0].header['EXPTIME']
-                        
-                        data = np.where(data>40000, np.nan, data)
-                        data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
-                        big_array.append(data)
+                        cur_median = np.nanmedian(data)
+                        print(f'{filt}:', cur_median)
+                        if not (cur_median > max_median or cur_median < min_median):
+                            data = np.where(data>40000, np.nan, data)
+                            data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
+                            big_array.append(data)
+                            
                         if counter%25 == 0 or counter == (no_of_files - 1):
                             big_array = np.array(big_array)
                             master_array = np.zeros_like(big_array[0])
@@ -538,7 +479,6 @@ class Photometry_Pipeline:
             else:
                 big_array = []
                 no_of_files = len(self.File_Dictionary['Flat'][self.Filter_Type])
-                
                 counter = 0
                 bigger_array = []
                 for file in self.File_Dictionary['Flat'][self.Filter_Type]:
@@ -546,10 +486,14 @@ class Photometry_Pipeline:
                         data = hdu[0].data
                         exp_time = hdu[0].header['EXPTIME']
                     
-                    data = np.where(data>40000, np.nan, data)
-                    data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
-                    big_array.append(data)
-                    if counter%25 == 0 or counter == (no_of_files - 1):
+                    cur_median = np.nanmedian(data)
+                    #print(f'{self.Filter_Type}:', cur_median)
+                    if not (np.nanmedian(data) > max_median or np.nanmedian(data) < min_median):
+                        data = np.where(data>40000, np.nan, data)
+                        data = data/exp_time - self.Bias_Master_Array/exp_time - dark_data
+                        big_array.append(data)
+                        
+                    if (counter%25 == 0 or counter == (no_of_files - 1)) and len(big_array)>0:
                         big_array = np.array(big_array)
                         master_array = np.zeros_like(big_array[0])
                         np.nanmedian(big_array, axis = 0, out = master_array)
@@ -696,20 +640,35 @@ class Photometry_Pipeline:
         try:
             big_array = []
             self.Filter_Type = filt
+            no_of_files = len(self.File_Dictionary['Raw'][filt])
+            
+            counter = 0
+            bigger_array = []
             for file in self.File_Dictionary['Raw'][filt]:
                 Single_image = self.Calculate_Science_Array(file)
                 big_array.append(Single_image)
-            big_array = np.array(big_array)
-            master_array = np.zeros_like(big_array[0])
-            np.nanmedian(big_array, axis = 0, out = master_array)
+                if counter%25 == 0 or counter == (no_of_files-1):
+                    big_array = np.array(big_array)
+                    master_array = np.zeros_like(big_array[0])
+                    np.nanmedian(big_array, axis = 0, out = master_array)
+                    big_array = []
+                    bigger_array.append(master_array)
             del(big_array)
+            del(master_array)
             
-            norm = astropy.visualization.simple_norm(master_array, percent=90)
-            plt.imshow(master_array, cmap = 'Greys_r', norm = norm)
+            bigger_array = np.array(bigger_array)
+            if len(bigger_array) == 1:
+                finished_array = bigger_array[0]
+            else:
+                finished_array = np.nanmedian(bigger_array, axis = 0)
+            
+            
+            norm = astropy.visualization.simple_norm(finished_array, percent=90)
+            plt.imshow(finished_array, cmap = 'Greys_r', norm = norm)
             plt.title(f'Processed image of {Object} filter: {filt}')
             plt.show()
             
-            hdu = fits.PrimaryHDU(data = master_array)
+            hdu = fits.PrimaryHDU(data = finished_array)
             hdul = fits.HDUList([hdu])
             
             processed_directory = Path(self.Raw_Directory + 'Processed_Files/')
@@ -717,7 +676,7 @@ class Photometry_Pipeline:
             if not processed_directory.is_dir():
                 os.mkdir(self.Raw_Directory + 'Processed_Files/')
             
-            hdul.writeto(self.Raw_Directory + 'Processed_Files/' + f'{Object}_{filt}_{self.Exposure_Time}.fits', overwrite = True)
+            hdul.writeto(self.Raw_Directory + 'Processed_Files/' + f'{Object}_{filt}_{str(float(self.Exposure_Time)).replace(".","_")}.fits', overwrite = True)
         
         except Exception as e:
             print(self.ERR_STATEMENT)
@@ -736,7 +695,93 @@ class Photometry_Pipeline:
                     
             else:
                 self.Calculate_Reduce_Images(Object, self.Filter_Type)
->>>>>>> master
+                
+        except Exception as e:
+            print(self.ERR_STATEMENT)
+            print(e)
+    
+    def Create_Colour_Image(self, Object, r_level = 1.0, g_level = 1.0, b_level = 1.0, cut_off_percentile = 50):
+        self.FUNC_NAME = '.Create_Colour_Image()'
+        self.ERR_STATEMENT = self.ERR_BASE + self.FUNC_NAME
+        
+        try:
+            #Check make sure process files exist
+            processed_directory = Path(self.Raw_Directory + 'Processed_Files/')
+            
+            if processed_directory.is_dir():
+                i = self.open_fits(self.Raw_Directory + 'Processed_Files/' + f'{Object}_SDSSip+_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
+                g = self.open_fits(self.Raw_Directory + 'Processed_Files/' + f'{Object}_SDSSgp+_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
+                r = self.open_fits(self.Raw_Directory + 'Processed_Files/' + f'{Object}_SDSSrp+_{str(float(self.Exposure_Time)).replace(".","_")}.fits')
+                
+                '''
+                pctl = 95
+                maximum = 0.
+                for img in [i,r,g]:
+                    val = np.percentile(img,pctl)
+                    if val > maximum:
+                        maximum = val
+                coloured_image = make_rgb(i, r, g, interval=ManualInterval(vmin=0, vmax=maximum))  
+                plt.imshow(coloured_image)
+                plt.show()
+                '''
+                # Normalize each channel separately
+                def normalize_channel(data, percentiles=(1, 99)):
+                    """Normalize data to 0-1 range using percentile clipping"""
+                    vmin = np.percentile(data, percentiles[0])
+                    vmax = np.percentile(data, percentiles[1])
+                    normalized = (data - vmin) / (vmax - vmin)
+                    return np.clip(normalized, 0, 1)
+                
+                # Normalize each band
+                i = np.nan_to_num(i, nan=np.nanmedian(i), posinf=0.0, neginf=0.0)
+                r = np.nan_to_num(r, nan=np.nanmedian(r), posinf=0.0, neginf=0.0)
+                g = np.nan_to_num(g, nan=np.nanmedian(g), posinf=0.0, neginf=0.0)
+                
+                bg_i = np.percentile(i, cut_off_percentile)  # 10th percentile is a good sky estimate
+                bg_r = np.percentile(r, cut_off_percentile)
+                bg_g = np.percentile(g, cut_off_percentile)
+                
+                i = i - bg_i
+                r = r - bg_r
+                g = g - bg_g
+                
+                i_norm = normalize_channel(i, (1, 99))
+                r_norm = normalize_channel(r, (1, 99))
+                g_norm = normalize_channel(g, (1, 99))
+                
+                # Clip negative values (background below sky level becomes 0)
+                i = np.clip(i, 0, None)
+                r = np.clip(r, 0, None)
+                g = np.clip(g, 0, None)
+                
+                # Normalize each channel separately to 0-1
+                def normalize_channel(data, percentiles=(1, 99)):
+                    vmin = np.percentile(data, percentiles[0])
+                    vmax = np.percentile(data, percentiles[1])
+                    normalized = (data - vmin) / (vmax - vmin)
+                    return np.clip(normalized, 0, 1)
+                
+                i_norm = normalize_channel(i, (1, 99))
+                r_norm = normalize_channel(r, (1, 99))
+                g_norm = normalize_channel(g, (1, 99))
+                
+                # Find the combined maximum for all channels
+                # This ensures consistent scaling
+                combined_max = np.max([i_norm.max(), r_norm.max(), g_norm.max()])
+                
+                # Use ManualInterval with black set to 0 and white to the max
+                rgb = make_rgb(i_norm * r_level, r_norm * g_level, g_norm*b_level, 
+                               interval=ManualInterval(vmin=0.1, vmax=combined_max),
+                               stretch=SqrtStretch())
+            
+                plt.figure(figsize=(10, 10))
+                plt.imshow(rgb, origin='lower')
+                plt.axis('off')
+                plt.title(f'{Object} - RGB')
+                plt.show()
+            else:
+                print('No processed images in this directory to make coloured, please run .Reduce_Images()')
+        
         except Exception as e:
             print(self.ERR_STATEMENT)
             print(e)
